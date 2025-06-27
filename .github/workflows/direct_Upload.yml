@@ -1,0 +1,51 @@
+name: Rclone Workflow Upload
+
+on:
+  workflow_dispatch:  # Enables manual trigger from the Actions tab
+
+jobs:
+  rclone-job-Upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install rclone
+      run: |
+        curl https://rclone.org/install.sh | sudo bash
+
+    - name: Create rclone.conf
+      run: |
+        mkdir -p ~/.config/rclone
+        cat <<EOF > ~/.config/rclone/rclone.conf
+        [w1928440]
+        type = drive
+        scope = drive
+        token = {"access_token":"ya29.a0AXooCgvBuHaABrOcOFd6XPc7_Jobu7gxIuEclzVoEAjYegVzBlJhuZOdbkQsCba-r2hsrYYELTRl9k1JiC7XJD2zzrmOqO3xWu7t3ne4pbS7uOXsj_4CuTHL0_Zzk3vIJyynmlbHoO71uHJMAcYHi-vFodDsB92N5aD_aCgYKAfgSARESFQHGX2MilerpDwLXbqWI5ph4oidGMg0171","token_type":"Bearer","refresh_token":"1//0gkoI7p7FtaZjCgYIARAAGBASNwF-L9IrrGIqlVBs3630G3I-oUQ7Ic6LyCh152g6USjw7aYnFRdS4q8N-ClGktC3tE85TILngEU","expiry":"2024-07-04T23:03:40.7952531+05:30"}
+        team_drive = 
+        EOF
+
+    - name: Conditional Backup
+      run: |
+        echo "Checking if the source file exists..."
+        if rclone lsf w1928440:Jellyfin_BKP/jellyfin_backup.zip; then
+          echo "File exists, proceeding with the backup."
+          rclone moveto w1928440:Jellyfin_BKP/jellyfin_backup.zip w1928440:Jellyfin_BKP/jellyfin_backup_$(date +%Y-%m-%d).zip
+        else
+          echo "File not found, skipping backup step."
+        fi
+
+    - name: Upload file directly from URL
+      run: |
+        rclone copyurl --drive-upload-cutoff 1000T https://download.vflix.life/jellyfin_backup.zip w1928440:Jellyfin_BKP/jellyfin_backup.zip
+    - name: Send Telegram notification
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      run: |
+        MESSAGE="Backup completed successfully on Rclone $(date +%Y-%m-%d)"
+        curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d chat_id="${CHANNEL_ID}" \
+            -d text="${MESSAGE}" \
+            -d parse_mode="Markdown"
