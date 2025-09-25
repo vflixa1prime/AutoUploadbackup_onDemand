@@ -40,7 +40,7 @@ jobs:
       run: |
         echo "Starting upload with speed and ETA..."
         rclone copyurl \
-          --drive-upload-cutoff 1000T \
+          --drive-upload-cutoff 750M \
           --stats=10s \
           --stats-one-line \
           --stats-log-level NOTICE \
