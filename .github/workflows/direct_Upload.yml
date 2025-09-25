@@ -59,6 +59,12 @@ jobs:
           sleep 10
         done
 
+    - name: Cleanup local file
+      run: |
+        echo "🧹 Removing local file..."
+        rm -f jellyfin_backup.zip
+
+
     - name: Send Telegram notification
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
