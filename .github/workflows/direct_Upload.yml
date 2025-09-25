@@ -35,22 +35,27 @@ jobs:
         else
           echo "File not found, skipping backup step."
         fi
-
-    - name: Upload with progress details
+    - name: Download file
       run: |
-        echo "Starting upload with speed and ETA..."
-        rclone copyurl \
+        echo "📥 Downloading file..."
+        wget -O jellyfin_backup.zip https://download.vflix.life/jellyfin_backup.zip
+
+    
+    - name: Upload to Google Drive with progress
+      run: |
+        echo "🚀 Starting upload with speed and ETA..."
+        rclone copy jellyfin_backup.zip w1928440:Jellyfin_BKP \
           --drive-chunk-size=64M \
-          --retries=1 \
+          --tpslimit=4 \
           --stats=10s \
           --stats-one-line \
           --stats-log-level NOTICE \
-          --tpslimit=4 \
-          https://download.vflix.life/jellyfin_backup.zip w1928440:Jellyfin_BKP/jellyfin_backup.zip &
-        
+          --log-file=/tmp/rclone_upload.log &
+
         UPLOAD_PID=$!
         while kill -0 $UPLOAD_PID 2>/dev/null; do
-          tail -n 1 ~/.cache/rclone/rclone.log | grep -Eo "Transferred.*ETA.*$" || echo "Pending..."
+          echo -n "$(date '+%H:%M:%S') - "
+          tail -n 1 /tmp/rclone_upload.log | grep -Eo "Transferred.*ETA.*$" || echo "Pending or no update yet..."
           sleep 10
         done
 
